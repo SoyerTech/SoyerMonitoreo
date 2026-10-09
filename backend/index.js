@@ -45,11 +45,8 @@ let estadoMqttConectado = false;
 
 const ultimasAlertasPorCamara = {};
 
-// Función que toma la hora actual real del servidor y la ajusta para que coincida con tu zona local
 function obtenerHoraActualLocal() {
     let d = new Date();
-    // Si tu servidor backend corre en un contenedor UTC, aquí puedes asegurar la hora exacta del evento en vivo.
-    // Como ya tu reloj superior marca bien, guardamos la fecha y hora local exacta del momento del evento:
     let anio = d.getFullYear();
     let mes = String(d.getMonth() + 1).padStart(2, '0');
     let dia = String(d.getDate()).padStart(2, '0');
@@ -296,7 +293,14 @@ io.on('connection', (socket) => {
 
 clienteMqtt.on('message', async (topic, message) => {
     try {
-        const payload = JSON.parse(message.toString());
+        const payloadStr = message.toString();
+        
+        // Validación rápida para ignorar mensajes que no sean JSON
+        if (!payloadStr.startsWith('{') && !payloadStr.startsWith('[')) {
+            return;
+        }
+
+        const payload = JSON.parse(payloadStr);
         const nombreCamaraFrigate = payload.after?.camera || 'desconocida';
         
         if (payload.type === 'new' || payload.type === 'update') {
@@ -321,7 +325,6 @@ clienteMqtt.on('message', async (topic, message) => {
                 idInterno: "sin_id"
             };
 
-            // Tomamos la hora exacta local del servidor al recibir el evento
             const horaLocalExacta = obtenerHoraActualLocal();
 
             const eventoData = {
@@ -355,7 +358,7 @@ clienteMqtt.on('message', async (topic, message) => {
             io.emit('alerta_movimiento', eventoData);
         }
     } catch (error) {
-        console.error("Error procesando mensaje MQTT:", error);
+        // Ignoramos silenciosamente payloads que no apliquen o datos crudos
     }
 });
 
