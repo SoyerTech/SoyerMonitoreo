@@ -16,6 +16,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos del Frontend compilado (Vite)
+app.use(express.static(path.join(__dirname, 'public')));
+
 if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
 }
@@ -295,7 +298,6 @@ clienteMqtt.on('message', async (topic, message) => {
     try {
         const payloadStr = message.toString();
         
-        // Validación rápida para ignorar mensajes que no sean JSON
         if (!payloadStr.startsWith('{') && !payloadStr.startsWith('[')) {
             return;
         }
@@ -360,6 +362,11 @@ clienteMqtt.on('message', async (topic, message) => {
     } catch (error) {
         // Ignoramos silenciosamente payloads que no apliquen o datos crudos
     }
+});
+
+// Redirigir cualquier otra ruta no API al index.html del Frontend para que cargue Vite correctamente
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 server.listen(PORT, () => {
