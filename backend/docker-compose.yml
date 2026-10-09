@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  soyertech-core:
+    build: .
+    container_name: soyertech_core_app
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mapeamos volúmenes para que tu base de datos SQLite, 
+      # los planos subidos y las configuraciones no se pierdan al actualizar el contenedor
+      - ./database.sqlite:/app/database.sqlite
+      - ./uploads:/app/uploads
+    environment:
+      - PORT=3000
+    networks:
+      - soyertech-net
+
+networks:
+  soyertech-net:
+    driver: bridge
