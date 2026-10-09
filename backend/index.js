@@ -364,8 +364,8 @@ clienteMqtt.on('message', async (topic, message) => {
     }
 });
 
-// Redirigir cualquier otra ruta no API al index.html del Frontend para que cargue Vite correctamente
-app.get('*', (req, res) => {
+// Comodín seguro compatible con Express moderno para redirigir al index.html de Vite
+app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
