@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
 
-const socket = io('http://localhost:3000', {
+const socket = io('http://10.10.2.78:3000', {
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 3000
@@ -48,8 +48,8 @@ function App() {
   });
 
   const [formJerarquia, setFormJerarquia] = useState({
-    cedis: '',      
-    zona: '',       
+    cedis: '',    
+    zona: '',     
     subzona: '',    
     dispositivo: '' 
   });
@@ -148,7 +148,7 @@ function App() {
 
   const obtenerCamarasGuardadas = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/camaras');
+      const res = await fetch('http://10.10.2.78:3000/api/camaras');
       const data = await res.json();
       if (res.ok) {
         setCamarasGuardadas(data);
@@ -164,7 +164,7 @@ function App() {
 
   const obtenerEmapDatos = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/emap');
+      const res = await fetch('http://10.10.2.78:3000/api/emap');
       const data = await res.json();
       if (res.ok) {
         setEmapPosiciones(data.posiciones || {});
@@ -181,7 +181,6 @@ function App() {
 
     socket.on('alerta_movimiento', (data) => {
       setEstadoMqtt(true);
-      // Mapeamos o etiquetamos la alerta con terminología de roedores/trampas
       const alertaRoedor = {
         ...data,
         etiqueta: data.etiqueta === 'persona' || data.etiqueta === 'movimiento' ? 'ROEDOR DETECTADO' : (data.etiqueta || 'ACTIVIDAD TRAMPA')
@@ -210,7 +209,7 @@ function App() {
   const obtenerHistorial = async (dias) => {
     setCargandoHistorial(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/eventos/${dias}`);
+      const res = await fetch(`http://10.10.2.78:3000/api/eventos/${dias}`);
       const data = await res.json();
       if (res.ok) {
         setListaHistorial(data);
@@ -228,7 +227,7 @@ function App() {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/eventos', {
+      const res = await fetch('http://10.10.2.78:3000/api/eventos', {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -254,7 +253,7 @@ function App() {
       formData.append('x', x);
       formData.append('y', y);
 
-      const res = await fetch('http://localhost:3000/api/emap', {
+      const res = await fetch('http://10.10.2.78:3000/api/emap', {
         method: 'POST',
         body: formData
       });
@@ -279,7 +278,7 @@ function App() {
     formData.append('cedis', emapSitioActual);
 
     try {
-      const res = await fetch('http://localhost:3000/api/emap', {
+      const res = await fetch('http://10.10.2.78:3000/api/emap', {
         method: 'POST',
         body: formData
       });
@@ -313,7 +312,6 @@ function App() {
   const zonasHistorialUnicas = [...new Set(listaHistorial.filter(i => !filtroCedis || i.cedis === filtroCedis).map(i => i.zona))];
   const subzonasHistorialUnicas = [...new Set(listaHistorial.filter(i => (!filtroCedis || i.cedis === filtroCedis) && (!filtroZona || i.zona === filtroZona)).map(i => i.subzona))];
 
-  // Cálculo de frecuencias por trampa para el Mapa de Calor
   const conteoEventosPorTrampa = listaHistorial.reduce((acc, curr) => {
     const k = curr.keyFrigate || curr.dispositivo;
     if (k) {
@@ -403,7 +401,7 @@ function App() {
     e.preventDefault();
     setErrorLogin('');
     try {
-      const res = await fetch('http://localhost:3000/api/login', {
+      const res = await fetch('http://10.10.2.78:3000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -434,7 +432,7 @@ function App() {
     const keyFrigate = editandoKey || formJerarquia.dispositivo.toLowerCase().replace(/\s+/g, '_');
 
     try {
-      const res = await fetch('http://localhost:3000/api/camaras', {
+      const res = await fetch('http://10.10.2.78:3000/api/camaras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,7 +460,7 @@ function App() {
   const guardarAsignacionRapida = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:3000/api/camaras', {
+      const res = await fetch('http://10.10.2.78:3000/api/camaras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -537,7 +535,7 @@ function App() {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/api/camaras', {
+      const res = await fetch('http://10.10.2.78:3000/api/camaras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sincronizarCompleto: true, nuevoCatalogo })
@@ -590,7 +588,7 @@ function App() {
     setCamarasGuardadas(nuevoCatalogo);
 
     try {
-      await fetch('http://localhost:3000/api/camaras', {
+      await fetch('http://10.10.2.78:3000/api/camaras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sincronizarCompleto: true, nuevoCatalogo })
@@ -719,7 +717,7 @@ function App() {
   const rutaPlanoCruda = emapPlanos[emapSitioActual] || emapPlanos[emapSitioActual?.trim()?.toLowerCase()] || '';
   const planoActualCedis = rutaPlanoCruda.startsWith('http') 
     ? rutaPlanoCruda 
-    : (rutaPlanoCruda ? `http://localhost:3000${rutaPlanoCruda}` : '');
+    : (rutaPlanoCruda ? `http://10.10.2.78:3000${rutaPlanoCruda}` : '');
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 space-y-6 relative">
