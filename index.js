@@ -16,7 +16,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 1. Servir archivos estáticos del Frontend compilado (Vite)
+// Servir archivos estáticos del Frontend compilado (Vite)
 app.use(express.static(path.join(__dirname, 'public')));
 
 if (!fs.existsSync('./uploads')) {
@@ -45,6 +45,7 @@ const SECRET_KEY = process.env.JWT_SECRET || 'llave_secreta_super_perrona';
 
 let db;
 let estadoMqttConectado = false;
+
 const ultimasAlertasPorCamara = {};
 
 function obtenerHoraActualLocal() {
@@ -55,6 +56,7 @@ function obtenerHoraActualLocal() {
     let horas = String(d.getHours()).padStart(2, '0');
     let minutos = String(d.getMinutes()).padStart(2, '0');
     let segundos = String(d.getSeconds()).padStart(2, '0');
+    
     return `${anio}-${mes}-${dia} ${horas}:${minutos}:${segundos}`;
 }
 
@@ -124,10 +126,12 @@ const USUARIOS_DB = [
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     const userFound = USUARIOS_DB.find(u => u.username === username && u.password === password);
+    
     if (userFound) {
         const token = jwt.sign({ username: userFound.username, rol: userFound.rol }, SECRET_KEY, { expiresIn: '8h' });
         return res.json({ mensaje: 'Bienvenido patrón', token, rol: userFound.rol });
     }
+    
     return res.status(401).json({ error: 'Credenciales inválidas' });
 });
 
@@ -160,6 +164,7 @@ app.get('/api/camaras', async (req, res) => {
 
 app.post('/api/camaras', async (req, res) => {
     let { keyFrigate, cedis, zona, subzona, dispositivo, idInterno, sincronizarCompleto, nuevoCatalogo } = req.body;
+    
     try {
         if (sincronizarCompleto && nuevoCatalogo) {
             await db.run(`DELETE FROM camaras`);
@@ -238,6 +243,7 @@ app.get('/api/emap', async (req, res) => {
 
 app.post('/api/emap', upload.single('planoFile'), async (req, res) => {
     const { keyFrigate, cedis, x, y } = req.body;
+    
     try {
         if (req.file && cedis) {
             const urlFinal = `/uploads/${req.file.filename}`;
@@ -276,8 +282,13 @@ clienteMqtt.on('connect', () => {
     });
 });
 
-clienteMqtt.on('offline', () => { estadoMqttConectado = false; });
-clienteMqtt.on('error', () => { estadoMqttConectado = false; });
+clienteMqtt.on('offline', () => {
+    estadoMqttConectado = false;
+});
+
+clienteMqtt.on('error', (err) => {
+    estadoMqttConectado = false;
+});
 
 io.on('connection', (socket) => {
     socket.on('disconnect', () => {});
@@ -286,7 +297,10 @@ io.on('connection', (socket) => {
 clienteMqtt.on('message', async (topic, message) => {
     try {
         const payloadStr = message.toString();
-        if (!payloadStr.startsWith('{') && !payloadStr.startsWith('[')) return;
+        
+        if (!payloadStr.startsWith('{') && !payloadStr.startsWith('[')) {
+            return;
+        }
 
         const payload = JSON.parse(payloadStr);
         const nombreCamaraFrigate = payload.after?.camera || 'desconocida';
@@ -297,11 +311,14 @@ clienteMqtt.on('message', async (topic, message) => {
 
             if (ultimasAlertasPorCamara[nombreCamaraFrigate]) {
                 const diferencia = ahora - ultimasAlertasPorCamara[nombreCamaraFrigate];
-                if (diferencia < tiempoEsperaMs) return;
+                if (diferencia < tiempoEsperaMs) {
+                    return;
+                }
             }
             ultimasAlertasPorCamara[nombreCamaraFrigate] = ahora;
 
             const camaraDb = await db.get(`SELECT * FROM camaras WHERE keyFrigate = ?`, [nombreCamaraFrigate]);
+            
             const ubicacion = camaraDb || {
                 cedis: "No agregada",
                 zona: "No agregada",
@@ -311,6 +328,7 @@ clienteMqtt.on('message', async (topic, message) => {
             };
 
             const horaLocalExacta = obtenerHoraActualLocal();
+
             const eventoData = {
                 keyFrigate: nombreCamaraFrigate,
                 cedis: ubicacion.cedis,
@@ -327,19 +345,27 @@ clienteMqtt.on('message', async (topic, message) => {
                 `INSERT INTO eventos (keyFrigate, cedis, zona, subzona, dispositivo, id_interno, id_foto, etiqueta, timestamp) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    eventoData.keyFrigate, eventoData.cedis, eventoData.zona, eventoData.subzona,
-                    eventoData.dispositivo, eventoData.id_interno, eventoData.id_foto,
-                    eventoData.etiqueta, eventoData.timestamp
+                    eventoData.keyFrigate, 
+                    eventoData.cedis, 
+                    eventoData.zona, 
+                    eventoData.subzona, 
+                    eventoData.dispositivo, 
+                    eventoData.id_interno, 
+                    eventoData.id_foto, 
+                    eventoData.etiqueta,
+                    eventoData.timestamp
                 ]
             );
 
             io.emit('alerta_movimiento', eventoData);
         }
-    } catch (error) {}
+    } catch (error) {
+        // Ignoramos silenciosamente payloads que no apliquen o datos crudos
+    }
 });
 
-// Comodín para SPA (React Router)
-app.get('*', (req, res) => {
+// Comodín seguro compatible con Express moderno para redirigir al index.html de Vite
+app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
