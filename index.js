@@ -118,7 +118,7 @@ async function iniciarDB() {
 iniciarDB();
 
 const USUARIOS_DB = [
-    { username: 'admin', password: 'Dan.741852', rol: 'Administrador' },
+    { username: 'admin', password: 'Soyer.741852', rol: 'Administrador' },
     { username: 'gerente', password: 'gerente123', rol: 'Gerente' },
     { username: 'operador', password: 'operador123', rol: 'Visualizador' }
 ];
@@ -271,12 +271,15 @@ app.post('/api/emap', upload.single('planoFile'), async (req, res) => {
     }
 });
 
-const brokerUrl = 'mqtt://10.10.2.78:1883';
+// Configuración dinámica del broker MQTT por red de Docker
+const mqttHost = process.env.MQTT_HOST || 'mqtt';
+const mqttPort = process.env.MQTT_PORT || '1883';
+const brokerUrl = `mqtt://${mqttHost}:${mqttPort}`;
 const clienteMqtt = mqtt.connect(brokerUrl, { reconnectPeriod: 5000 });
 
 clienteMqtt.on('connect', () => {
     estadoMqttConectado = true;
-    console.log('✅ Conectado exitosamente al Mosquitto de Frigate');
+    console.log('✅ Conectado exitosamente al broker MQTT de Frigate');
     clienteMqtt.subscribe('frigate/#', (err) => {
         if (!err) console.log('📡 Suscrito a frigate/#');
     });
@@ -370,5 +373,5 @@ app.get(/^(?!\/api).*/, (req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`🚀 Servidor HikCentral-DB corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor SoyerMonitoreo corriendo en http://localhost:${PORT}`);
 });
